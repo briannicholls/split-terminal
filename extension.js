@@ -1,6 +1,8 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require("vscode");
+const fs = require('fs');
+const path = require('path');
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -35,16 +37,39 @@ function activate(context) {
 }
 
 function splitTerminal() {
-    // Ensure there is an active terminal to split
-    if (vscode.window.terminals.length === 0) {
-        const terminal = vscode.window.createTerminal();
-        terminal.show();
-    }
-    
-    // Wait a short period to ensure the terminal is ready
-    setTimeout(() => {
-        vscode.commands.executeCommand('workbench.action.terminal.split');
-    }, 1000); // Adjust the delay as necessary
+  // Ensure there is an active terminal
+  if (vscode.window.terminals.length === 0) {
+      vscode.window.createTerminal().show();
+  }
+
+  // Split the terminal
+  setTimeout(() => {
+    vscode.commands.executeCommand('workbench.action.terminal.split').then(() => {
+      // Focus on the new split terminal and run a command from settings.json
+      const terminal = vscode.window.terminals[1];
+      terminal.show();
+
+      const settingsConfig = readSettingsConfig()
+
+      // Retrieve the value of the setting
+      const startCommand = settingsConfig?.['split-terminal.myStartCommand'] || ''
+
+      // Send command to terminal
+      terminal.sendText(startCommand)
+    });
+  }, 1000); // Adjust delay as needed for terminal readiness
+}
+
+function readSettingsConfig() {
+  const settingsPath = path.join(__dirname, '.vscode', 'settings.json');
+  try {
+      const data = fs.readFileSync(settingsPath, 'utf8');
+      const config = JSON.parse(data);
+      return config;
+  } catch (error) {
+      console.error('Error reading settings file:', error);
+      return null;
+  }
 }
 
 // This method is called when your extension is deactivated
